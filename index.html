@@ -1,3 +1,5 @@
+<!-- This is a simple Flashcard Quiz App -->
+<!-- git add . && git commit -m "Update Flashcard App" && git push origin main -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,9 +77,9 @@
       background: var(--primary-color);
       border: none;
       color: #fff;
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
@@ -124,12 +126,13 @@
 
     #controls {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
-      gap: 1rem;
+      gap: 0.5rem;
     }
 
     #controls button {
-      width: 100px;
+      width: auto;
     }
 
     #counter {
