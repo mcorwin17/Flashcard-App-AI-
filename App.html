@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcard Quiz App</title>
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --secondary-color: #50e3c2;
+      --accent-color: #f5a623;
+      --bg-gradient: linear-gradient(135deg, #4a90e2 0%, #50e3c2 100%);
+      --card-gradient: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+      --text-color: #333;
+    }
+
+    [data-theme="dark"] {
+      --bg-gradient: linear-gradient(135deg, #333 0%, #111 100%);
+      --text-color: #eee;
+      --primary-color: #ffa500;
+      --secondary-color: #ff9;
+      --accent-color: #50e3c2;
+      --card-gradient: linear-gradient(135deg, #444 0%, #222 100%);
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-gradient);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      margin: 0;
+      color: var(--text-color);
+    }
+
+    #home-screen {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+    }
+
+    #home-screen h1 {
+      margin-bottom: 1rem;
+      color: var(--primary-color);
+    }
+
+    #set-list {
+      padding: 0;
+      margin: 1rem 0;
+    }
+
+    #set-list li {
+      list-style: none;
+      background: var(--secondary-color);
+      margin: 0.5rem 0;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    #set-list li:hover {
+      transform: scale(1.05);
+      background: var(--accent-color);
+    }
+
+    button {
+      background: var(--primary-color);
+      border: none;
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    button:hover {
+      background: var(--accent-color);
+      transform: translateY(-2px);
+    }
+
+    #flashcard-view {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+    }
+
+    #flashcard-view #back-to-library {
+      margin-bottom: 1rem;
+    }
+
+    #card {
+      min-height: 200px;
+      background: var(--card-gradient);
+      border: 3px solid var(--primary-color);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+
+    #card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    #controls button {
+      width: 100px;
+    }
+
+    #counter {
+      margin-top: 1rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+  </style>
+</head>
+<body>
+  <div id="home-screen">
+    <h1>Flashcard Library</h1>
+    <ul id="set-list"></ul>
+    <button id="create-set">Create New Set</button>
+    <button id="dark-mode-toggle" style="margin-top:0.5rem;">Toggle Dark Mode</button>
+  </div>
+  <div id="flashcard-view" style="display:none;">
+    <button id="back-to-library">Back to Library</button>
+    <h2 id="side-label" style="margin-bottom: 1rem; color: var(--primary-color);"></h2>
+    <div id="card">Click to Flip</div>
+    <div id="controls">
+      <button id="prev">Previous</button>
+      <button id="next">Next</button>
+      <button id="shuffle">Shuffle</button>
+      <button id="quiz-mode">Quiz Mode</button>
+      <button id="edit-mode">Edit Mode</button>
+      <button id="remove-card" style="display:none;">Remove Card</button>
+    </div>
+    <div id="counter"></div>
+    <div id="add-card-form" style="margin-top:1rem; display:none;">
+      <input id="new-term" type="text" placeholder="Term:" style="padding:0.5rem; width: calc(100% - 1rem); margin-bottom:0.5rem;" />
+      <input id="new-definition" type="text" placeholder="Definition:" style="padding:0.5rem; width: calc(100% - 1rem); margin-bottom:0.5rem;" />
+      <button id="add-card">Add Card</button>
+    </div>
+    <div id="quiz-controls" style="margin-top:1rem; display:none;">
+      <button id="correct-btn" disabled>Correct</button>
+      <button id="incorrect-btn" disabled>Incorrect</button>
+    </div>
+  </div>  <!-- end flashcard-view -->
+
+  <script>
+    // Load saved sets or use default
+    const defaultSets = [
+      {
+        name: "Default Set",
+        flashcards: [
+          { question: { type: 'text', content: "What is the capital of France?" }, answer: { type: 'text', content: "Paris" } },
+          { question: { type: 'text', content: "What is 2 + 2?" }, answer: { type: 'text', content: "4" } },
+          { question: { type: 'text', content: "What is the largest planet in our solar system?" }, answer: { type: 'text', content: "Jupiter" } },
+          { question: { type: 'image', content: "https://example.com/image1.gif" }, answer: { type: 'text', content: "This is an image of a cat." } },
+          { question: { type: 'text', content: "What is the chemical symbol for water?" }, answer: { type: 'text', content: "H2O" } },
+          { question: { type: 'text', content: "What is the speed of light?" }, answer: { type: 'text', content: "299,792,458 meters per second" } },
+          { question: { type: 'text', content: "Who wrote Romeo and Juliet?" }, answer: { type: 'text', content: "William Shakespeare" } },
+          { question: { type: 'text', content: "What is the capital of Japan?" }, answer: { type: 'text', content: "Tokyo" } },
+          { question: { type: 'text', content: "What element has the symbol Fe?" }, answer: { type: 'text', content: "Iron" } },
+          { question: { type: 'text', content: "In what year did World War II end?" }, answer: { type: 'text', content: "1945" } },
+          { question: { type: 'text', content: "What is the largest ocean?" }, answer: { type: 'text', content: "Pacific Ocean" } },
+          { question: { type: 'text', content: "What is the chemical symbol for gold?" }, answer: { type: 'text', content: "Au" } },
+          { question: { type: 'text', content: "Who painted the Mona Lisa?" }, answer: { type: 'text', content: "Leonardo da Vinci" } },
+          { question: { type: 'text', content: "What is the longest river in the world?" }, answer: { type: 'text', content: "Nile River" } },
+          { question: { type: 'text', content: "What is the hardest natural substance?" }, answer: { type: 'text', content: "Diamond" } }
+        ]
+      }
+    ];
+    let flashcardSets = [];
+    try {
+      const saved = localStorage.getItem('flashcardSets');
+      flashcardSets = saved ? JSON.parse(saved) : defaultSets;
+    } catch (e) {
+      flashcardSets = defaultSets;
+    }
+
+    function saveSets() {
+      localStorage.setItem('flashcardSets', JSON.stringify(flashcardSets));
+    }
+
+    let currentSet = flashcardSets[0].flashcards;
+    let currentSetName = flashcardSets[0].name;
+
+    // DOM references
+    const homeScreen = document.getElementById('home-screen');
+    const flashcardView = document.getElementById('flashcard-view');
+    const setList = document.getElementById('set-list');
+    const createSetBtn = document.getElementById('create-set');
+    const backBtn = document.getElementById('back-to-library');
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+    function showHome() {
+      homeScreen.style.display = 'block';
+      flashcardView.style.display = 'none';
+    }
+
+    function showFlashcards() {
+      homeScreen.style.display = 'none';
+      flashcardView.style.display = 'block';
+      renderSetList(); // refresh library after edits
+      updateCard();
+    }
+
+    function renderSetList() {
+      setList.innerHTML = '';
+      flashcardSets.forEach((set, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="set-name">${set.name}</span>
+                        <button class="rename-set">✏️</button>
+                        <button class="delete-set">🗑️</button>`;
+        li.addEventListener('click', () => {
+          currentSet = set.flashcards;
+          currentSetName = set.name;
+          showingAnswer = false;
+          currentIndex = 0;
+          showFlashcards();
+        });
+        // Rename set
+        li.querySelector('.rename-set').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const newName = prompt('Enter new name for this set:', set.name);
+          if (newName) {
+            set.name = newName;
+            saveSets();
+            renderSetList();
+          }
+        });
+        // Delete set
+        li.querySelector('.delete-set').addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete set "${set.name}"?`)) {
+            flashcardSets.splice(idx, 1);
+            saveSets();
+            renderSetList();
+          }
+        });
+        setList.appendChild(li);
+      });
+    }
+
+    createSetBtn.addEventListener('click', () => {
+      const name = prompt('New set name:');
+      if (!name) return;
+      const newSet = { name, flashcards: [] };
+      flashcardSets.push(newSet);
+      saveSets();
+      renderSetList();
+    });
+
+    backBtn.addEventListener('click', showHome);
+
+    // Flashcards data: each side can be 'text' or 'image'
+    let currentIndex = 0;
+    let showingAnswer = false;
+    let isQuizMode = false;
+    let quizCards = [];
+    let quizIndex = 0;
+
+    // DOM elements
+    const card = document.getElementById('card');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const counter = document.getElementById('counter');
+    const sideLabel = document.getElementById('side-label');
+    const shuffleBtn = document.getElementById('shuffle');
+    const quizModeBtn = document.getElementById('quiz-mode');
+    const quizControls = document.getElementById('quiz-controls');
+    const correctBtn = document.getElementById('correct-btn');
+    const incorrectBtn = document.getElementById('incorrect-btn');
+    const addCardForm = document.getElementById('add-card-form');
+    const editModeBtn = document.getElementById('edit-mode');
+    const removeCardBtn = document.getElementById('remove-card');
+
+    // Render the current side (question or answer)
+    function renderSide(side) {
+      // Update side label
+      sideLabel.textContent = showingAnswer ? 'Definition' : 'Term';
+      if (side.type === 'text') {
+        card.innerHTML = side.content;
+      } else if (side.type === 'image') {
+        card.innerHTML = `<img src="${side.content}" alt="GIF" />`;
+      }
+    }
+
+    // Update card content and controls
+    function updateCard() {
+      const side = showingAnswer ? currentSet[currentIndex].answer : currentSet[currentIndex].question;
+      renderSide(side);
+      prevBtn.disabled = currentIndex === 0;
+      // Always enable Next so users can restart at end
+      nextBtn.disabled = false;
+      counter.textContent = `Card ${currentIndex + 1} of ${currentSet.length}`;
+    }
+
+    // Flip card on click (supports two-way flipping in quiz mode)
+    card.addEventListener('click', () => {
+      if (isQuizMode) {
+        // Toggle between term and definition
+        showingAnswer = !showingAnswer;
+        if (showingAnswer) {
+          // Show definition side
+          const side = quizCards[quizIndex].answer;
+          renderSide(side);
+          sideLabel.textContent = 'Definition';
+          correctBtn.disabled = false;
+          incorrectBtn.disabled = false;
+        } else {
+          // Show term side
+          const side = quizCards[quizIndex].question;
+          renderSide(side);
+          sideLabel.textContent = 'Term';
+          // Prevent answering again until flipped to definition
+          correctBtn.disabled = true;
+          incorrectBtn.disabled = true;
+        }
+      } else {
+        // Original non-quiz flipping
+        showingAnswer = !showingAnswer;
+        updateCard();
+      }
+    });
+// Navigate to previous card
+
+    // Navigate to previous card
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        showingAnswer = false;
+        updateCard();
+      }
+    });
+
+    // Navigate to next card (with reshuffle/restart at end)
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < currentSet.length - 1) {
+        // Move to next card
+        currentIndex++;
+      } else {
+        // At end: reshuffle and restart
+        const lastCard = currentSet[currentIndex];
+        shuffleArray(currentSet);
+        if (currentSet.length > 1 && currentSet[0] === lastCard) {
+          // Ensure the first card isn't the one just shown
+          [currentSet[0], currentSet[1]] = [currentSet[1], currentSet[0]];
+        }
+        currentIndex = 0;
+        alert('You reached the end! Deck has been reshuffled and restarted.');
+      }
+      showingAnswer = false;
+      updateCard();
+    });
+
+    // Add card form functionality
+    const newTermInput = document.getElementById('new-term');
+    const newDefinitionInput = document.getElementById('new-definition');
+    const addCardBtn = document.getElementById('add-card');
+    addCardBtn.addEventListener('click', () => {
+      const term = newTermInput.value.trim();
+      const definition = newDefinitionInput.value.trim();
+      if (!term || !definition) {
+        alert('Please enter both a term and definition.');
+        return;
+      }
+      currentSet.push({
+        question: { type: 'text', content: term },
+        answer:   { type: 'text', content: definition }
+      });
+      saveSets();
+      newTermInput.value = '';
+      newDefinitionInput.value = '';
+      currentIndex = currentSet.length - 1;
+      showingAnswer = false;
+      updateCard();
+      alert(`Flashcard added to "${currentSetName}"`);
+    });
+    // Shuffle current set
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+    shuffleBtn.addEventListener('click', () => {
+      shuffleArray(currentSet);
+      currentIndex = 0;
+      showingAnswer = false;
+      updateCard();
+    });
+
+    // Toggle edit mode
+    let isEditMode = false;
+    editModeBtn.addEventListener('click', () => {
+      isEditMode = !isEditMode;
+      if (isEditMode) {
+        addCardForm.style.display = 'block';
+        removeCardBtn.style.display = 'inline-block';
+        editModeBtn.textContent = 'Exit Edit';
+      } else {
+        addCardForm.style.display = 'none';
+        removeCardBtn.style.display = 'none';
+        editModeBtn.textContent = 'Edit Mode';
+      }
+    });
+
+    // Remove current card in edit mode
+    removeCardBtn.addEventListener('click', () => {
+      if (confirm('Remove this card from the set?')) {
+        currentSet.splice(currentIndex, 1);
+        saveSets();
+        if (currentIndex >= currentSet.length) {
+          currentIndex = currentSet.length - 1;
+        }
+        if (currentSet.length === 0) {
+          alert('No cards left in this set.');
+          showHome();
+        } else {
+          showingAnswer = false;
+          updateCard();
+        }
+      }
+    });
+
+    // Toggle quiz mode
+    quizModeBtn.addEventListener('click', () => {
+      if (!isQuizMode) {
+        // Start quiz
+        isQuizMode = true;
+        quizCards = currentSet.map(card => ({ ...card, correctStreak: 0 }));
+        shuffleArray(quizCards);
+        quizIndex = 0;
+        // Hide normal controls & form
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        shuffleBtn.style.display = 'none';
+        addCardForm.style.display = 'none';
+        quizModeBtn.textContent = 'Exit Quiz';
+        // Show quiz controls
+        quizControls.style.display = 'block';
+        showQuizCard();
+      } else {
+        // Exit quiz
+        isQuizMode = false;
+        prevBtn.style.display = '';
+        nextBtn.style.display = '';
+        shuffleBtn.style.display = '';
+        addCardForm.style.display = '';
+        quizModeBtn.textContent = 'Quiz Mode';
+        quizControls.style.display = 'none';
+        currentIndex = 0;
+        showingAnswer = false;
+        updateCard();
+      }
+    });
+
+    function showQuizCard() {
+      showingAnswer = false;
+      // Show term side
+      const side = quizCards[quizIndex].question;
+      renderSide(side);
+      sideLabel.textContent = 'Term';
+      correctBtn.disabled = true;
+      incorrectBtn.disabled = true;
+      counter.textContent = `Remaining: ${quizCards.length}`;
+    }
+
+    correctBtn.addEventListener('click', () => handleQuizAnswer(true));
+    incorrectBtn.addEventListener('click', () => handleQuizAnswer(false));
+
+    function handleQuizAnswer(isCorrect) {
+      const cardObj = quizCards[quizIndex];
+      if (isCorrect) {
+        cardObj.correctStreak++;
+      } else {
+        cardObj.correctStreak = 0;
+      }
+      // Remove mastered cards
+      if (cardObj.correctStreak >= 2) {
+        quizCards.splice(quizIndex, 1);
+        saveSets();
+      }
+      if (quizCards.length === 0) {
+        alert('Quiz complete! You’ve mastered all cards.');
+        quizModeBtn.click(); // exit quiz
+        return;
+      }
+      // Next random card
+      quizIndex = Math.floor(Math.random() * quizCards.length);
+      showQuizCard();
+    }
+    // Theme initialization
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    darkModeToggle.textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+    darkModeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      darkModeToggle.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+    });
+    // initialize home screen
+    renderSetList();
+    showHome();
+  </script>
+</body>
+</html>
